@@ -1,0 +1,95 @@
+<?php
+
+namespace {{ namespace }};
+
+use {{ namespacedModel }};
+use {{ rootNamespace }}Http\Controllers\Controller;
+use Illuminate\Http\Request;
+
+// Custom Requests
+use App\Http\Requests\{{ requestFolder }}{{ model }}\Index{{ model }};
+use App\Http\Requests\{{ requestFolder }}{{ model }}\Show{{ model }};
+use App\Http\Requests\{{ requestFolder }}{{ model }}\Create{{ model }};
+use App\Http\Requests\{{ requestFolder }}{{ model }}\Update{{ model }};
+use App\Http\Requests\{{ requestFolder }}{{ model }}\Delete{{ model }};
+
+// Custom Events
+use App\Events\{{ requestFolder }}{{ model }}\{{ model }}Collected;
+use App\Events\{{ requestFolder }}{{ model }}\{{ model }}Fetched;
+use App\Events\{{ requestFolder }}{{ model }}\{{ model }}Created;
+use App\Events\{{ requestFolder }}{{ model }}\{{ model }}Updated;
+use App\Events\{{ requestFolder }}{{ model }}\{{ model }}Deleted;
+
+class {{ class }} extends Controller
+{
+    public function index(Index{{model}} $request)
+    {
+        $paginated = $request->get('per_page', NULL);
+
+        $data = {{ model }}::when($paginated,
+            function($query) use ($paginated) { return $query->paginate($paginated); },
+            function($query) { return $query->get(); }
+        );
+
+        event(new {{ model }}Collected($data));
+
+        return customResponse()
+            ->data($data)
+            ->message('Successfully collected record')
+            ->success()
+            ->generate();
+    }
+
+    public function store(Create{{model}} $request)
+    {
+        $data = $request->all();
+
+        $model = {{ model }}::create($data)->fresh();
+
+        event(new {{ model }}Created($model));
+
+        return customResponse()
+            ->data($model)
+            ->message('Successfully created record')
+            ->success()
+            ->generate();
+    }
+
+    public function show(Show{{model}} $request, {{ model }} ${{ modelVariable }})
+    {
+        event(new {{ model }}Fetched(${{ modelVariable }}));
+
+        return customResponse()
+            ->data(${{ modelVariable }})
+            ->message('Successfully fetched record')
+            ->success()
+            ->generate();
+    }
+
+    public function update(Update{{model}} $request, {{ model }} ${{ modelVariable }})
+    {
+        ${{ modelVariable }}->update($request->all());
+        ${{ modelVariable }} = ${{ modelVariable }}->fresh();
+
+        event(new {{ model }}Updated(${{ modelVariable }}));
+
+        return customResponse()
+            ->data(${{ modelVariable }})
+            ->message('Successfully updated record')
+            ->success()
+            ->generate();
+    }
+
+    public function destroy(Delete{{model}} $request, {{ model }} ${{ modelVariable }})
+    {
+        ${{ modelVariable }}->delete();
+
+        event(new {{ model }}Deleted(${{ modelVariable }}));
+
+        return customResponse()
+            ->data(${{ modelVariable }})
+            ->message('Successfully deleted record')
+            ->success()
+            ->generate();
+    }
+}
